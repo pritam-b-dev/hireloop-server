@@ -1,13 +1,16 @@
 const express = require("express");
+const cors = require("cors");
 const app = express();
 const port = 5000;
 const { MongoClient, ServerApiVersion } = require("mongodb");
 require("dotenv").config();
-const uri = process.env.MONGODB_URI;
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+//middleware
+app.use(cors()); // এটাও মিডলওয়ার হিসেবে কাজ করে। সবার আগে অনুমতি চেক করে।
+app.use(express.json()); // এটাও মিডলওয়ার হিসেবে কাজ করে। রিকোয়েস্টের বডিটা রেডি করে দেয়।
+//এছাড়াও প্রজেক্টের রিকোয়ারমেন্ট হিসেবে আমরা কাস্টম মিডলওয়ার বানাই এবগ এটা বানাতে হয়ই।
+
+const uri = process.env.MONGODB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -22,8 +25,17 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    //db and collection
     const database = client.db("hireloop_db");
     const jobCollection = database.collection("jobs");
+
+    //api
+
+    app.post("/jobs", async (req, res) => {
+      const job = req.body; //
+      const result = await jobCollection.insertOne(job);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
@@ -36,6 +48,10 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
