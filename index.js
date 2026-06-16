@@ -31,7 +31,7 @@ async function run() {
 
     //api
 
-    app.post("/jobs", async (req, res) => {
+    app.post("/api/jobs", async (req, res) => {
       const job = req.body; //
       const result = await jobCollection.insertOne(job);
       res.send(result);
@@ -42,9 +42,8 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
   }
 }
 run().catch(console.dir);
