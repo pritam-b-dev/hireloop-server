@@ -1,0 +1,43 @@
+# Environmental variables 
+.env
+.env.local
+.env.production
+*.env
+
+# Dependencies 
+node_modules/
+bower_components/
+vendor/
+venv/
+.venv/
+env/
+
+# Build and Output 
+dist/
+build/
+out/
+*.exe
+*.dll
+*.so
+
+# Logs 
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs and Text Editors 
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files 
+.DS_Store
+.DS_Store?
+_Macintosh
+Thumbs.db
+ehthumbs.db
