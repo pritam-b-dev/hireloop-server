@@ -28,8 +28,11 @@ async function run() {
     //db and collection
     const database = client.db("hireloop_db");
     const jobCollection = database.collection("jobs");
+    const companyCollection = database.collection("companies");
 
     //api
+
+    //jobs related api
 
     app.post("/api/jobs", async (req, res) => {
       const job = req.body; //
@@ -48,6 +51,13 @@ async function run() {
 
       const cursor = jobCollection.find(query);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //company related api
+    app.post("/api/companies", async (req, res) => {
+      const company = req.body;
+      const result = await companyCollection.insertOne(company);
       res.send(result);
     });
 
