@@ -34,12 +34,6 @@ async function run() {
 
     //jobs related api
 
-    app.post("/api/jobs", async (req, res) => {
-      const job = req.body; //
-      const result = await jobCollection.insertOne(job);
-      res.send(result);
-    });
-
     app.get("/api/jobs", async (req, res) => {
       const query = {};
       if (req.query.companyId) {
@@ -54,12 +48,17 @@ async function run() {
       res.send(result);
     });
 
-    //company related api
-    app.post("/api/companies", async (req, res) => {
-      const company = req.body;
-      const result = await companyCollection.insertOne(company);
+    app.post("/api/jobs", async (req, res) => {
+      const job = req.body;
+      const newJob = {
+        ...job,
+        createdAt: new Date(),
+      };
+      const result = await jobCollection.insertOne(newJob);
       res.send(result);
     });
+
+    //company related api
 
     app.get("/api/my/companies", async (req, res) => {
       const query = {};
@@ -67,6 +66,16 @@ async function run() {
         query.recruiterId = req.query.recruiterId;
       }
       const result = await companyCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.post("/api/companies", async (req, res) => {
+      const company = req.body;
+      const newCompany = {
+        ...company,
+        createdAt: new Date(),
+      };
+      const result = await companyCollection.insertOne(newCompany);
       res.send(result);
     });
 
