@@ -103,8 +103,31 @@ async function run() {
 
     //company related api
     app.get("/api/companies", async (req, res) => {
-      const cursor = companyCollection.find();
-      const result = await cursor.toArray();
+      const result = await companyCollection
+        .aggregate([
+          {
+            $lookup: {
+              from: "jobs",
+              let: { compId: { $toString: "$_id" } }, // কোম্পানির আইডিকে স্ট্রিং
+              pipeline: [
+                { $match: { $expr: { $eq: ["$companyId", "$$compId"] } } }, // স্ট্রিং এর সাথে স্ট্রিং
+              ],
+              as: "jobs",
+            },
+          },
+          {
+            $addFields: {
+              jobCount: { $size: "$jobs" },
+            },
+          },
+          {
+            $project: {
+              jobs: 0,
+            },
+          },
+        ])
+        .toArray();
+
       res.send(result);
     });
 
