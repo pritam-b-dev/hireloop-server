@@ -10,6 +10,11 @@ app.use(cors()); // এটাও মিডলওয়ার হিসেবে ক
 app.use(express.json()); // এটাও মিডলওয়ার হিসেবে কাজ করে। রিকোয়েস্টের বডিটা রেডি করে দেয়।
 //এছাড়াও প্রজেক্টের রিকোয়ারমেন্ট হিসেবে আমরা কাস্টম মিডলওয়ার বানাই এবগ এটা বানাতে হয়ই।
 
+const logger = (req, res, next) => {
+  console.log("logger middleware logged", req.params);
+  next();
+};
+
 const uri = process.env.MONGODB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -33,14 +38,66 @@ async function run() {
     const applicationsCollection = database.collection("applications");
     const planCollection = database.collection("plans");
     const subscriptionCollection = database.collection("subscriptions");
+    const sessionCollection = database.collection("session");
+
+    //varification related
+    const verifyToken = async (req, res, next) => {
+      console.log("headers", req.headers);
+      const authHeader = req.headers?.authorization;
+      if (!authHeader) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      const token = authHeader.split(" ")[1];
+      if (!token) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      const query = { token: token };
+      const session = await sessionCollection.findOne(query);
+      if (!session) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+      console.log("session is", session);
+      const userId = session.userId;
+      const userQuery = {
+        _id: userId,
+      };
+      const user = await userCollection.findOne(userQuery);
+      if (!user) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
+
+      //set data in the req object
+      req.user = user;
+      next();
+    };
+
+    //must be used after varifyToken middleware
+    const verifySeeker = async (req, res, next) => {
+      if (req.user?.role !== "seeker") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      next();
+    };
+    //must be used after varifyToken middleware
+    const verifyReqruiter = async (req, res, next) => {
+      if (req.user?.role !== "recruiter") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      next();
+    };
+
+    //must be used after varifyToken middleware
+    const verifyAdmin = async (req, res, next) => {
+      if (req.user?.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      next();
+    };
 
     //api
-
-    app.get("/api/users", async (req, res) => {
-      const cursor = userCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    });
 
     //jobs related api
 
@@ -78,18 +135,28 @@ async function run() {
     });
 
     //application related api
-    app.get("/api/applications", async (req, res) => {
-      const query = {};
-      if (req.query.applicantId) {
-        query.applicantId = req.query.applicantId;
-      }
-      if (req.query.jobId) {
-        query.jobId = req.query.jobId;
-      }
-      const cursor = applicationsCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+    app.get(
+      "/api/applications",
+      verifyToken,
+      verifySeeker,
+      async (req, res) => {
+        const query = {};
+        if (req.query.applicantId) {
+          query.applicantId = req.query.applicantId;
+
+          //check whether asking for user information or someone else
+          if (req.user._id.toString() !== req.query.applicantId) {
+            return res.status(403).send({ message: "forbidden access" });
+          }
+        }
+        if (req.query.jobId) {
+          query.jobId = req.query.jobId;
+        }
+        const cursor = applicationsCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      },
+    );
 
     app.post("/api/applications", async (req, res) => {
       const application = req.body;
@@ -102,7 +169,7 @@ async function run() {
     });
 
     //company related api
-    app.get("/api/companies", async (req, res) => {
+    app.get("/api/companies", logger, verifyToken, async (req, res) => {
       const result = await companyCollection
         .aggregate([
           {
@@ -150,18 +217,24 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/api/companies/:id", async (req, res) => {
-      const id = req.params.id;
-      const updatedCompany = req.body;
-      const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          status: updatedCompany.status,
-        },
-      };
-      const result = await companyCollection.updateOne(filter, updatedDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/api/companies/:id",
+      logger,
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const updatedCompany = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            status: updatedCompany.status,
+          },
+        };
+        const result = await companyCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      },
+    );
 
     //plans related api
 
